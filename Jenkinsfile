@@ -55,5 +55,11 @@ pipeline {
                     sh "chmod +x acceptance-test.sh && ./acceptance-test.sh"
                }
           }
+
+          post {
+               always {
+                    sh "docker stop calculator"
+               }
+          }
      }
 }
