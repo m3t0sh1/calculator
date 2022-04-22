@@ -33,36 +33,19 @@ pipeline {
 
           stage("Docker build") {
                steps {
-                    sh "docker build -t leszko/calculator:${BUILD_TIMESTAMP} ."
-               }
-          }
-
-          stage("Docker login") {
-               steps {
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-hub-credentials',
-                               usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                         sh "docker login --username $USERNAME --password $PASSWORD"
-                    }
+                    sh "docker build -t localhost:5000/calculator ."
                }
           }
 
           stage("Docker push") {
                steps {
-                    sh "docker push leszko/calculator:${BUILD_TIMESTAMP}"
+                    sh "docker push localhost:5000/calculator"
                }
           }
 
-          stage("Update version") {
-               steps {
-                    sh "sed  -i 's/{{VERSION}}/${BUILD_TIMESTAMP}/g' calculator.yaml"
-               }
-          }
-          
           stage("Deploy to staging") {
                steps {
-                    sh "kubectl config use-context staging"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
+                    sh "docker run -d --rm -p 8765:8080 --name calculator localhost:5000/calculator"
                }
           }
 
@@ -71,20 +54,6 @@ pipeline {
                     sleep 60
                     sh "chmod +x acceptance-test.sh && ./acceptance-test.sh"
                }
-          }
-
-          stage("Release") {
-               steps {
-                    sh "kubectl config use-context production"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
-               }
-          }
-          stage("Smoke test") {
-              steps {
-                  sleep 60
-                  sh "chmod +x smoke-test.sh && ./smoke-test.sh"
-              }
           }
      }
 }
